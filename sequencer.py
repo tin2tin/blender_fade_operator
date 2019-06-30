@@ -136,6 +136,14 @@ class SequencerDeinterlaceSelectedMovies(Operator):
         return {'FINISHED'}
 
 
+def SetStripLevel(self, context, value):
+    strip = context.scene.sequence_editor.active_strip
+    if strip.type == 'SOUND':
+        strip.volume = value
+    else:
+        strip.blend_alpha = value
+
+
 def ExecuteFadeInOut(self, context, mode, duration, level):
     seq = context.scene.sequence_editor
     scn = context.scene
@@ -157,64 +165,47 @@ def ExecuteFadeInOut(self, context, mode, duration, level):
             self.mode = 'OUT'
 
     if strip.type == 'SOUND':
-        if(self.mode) == 'OUT':
-            scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.volume = self.fade_level
-            strip.keyframe_insert('volume')
-            scn.frame_current = strip.frame_final_end
-            strip.volume = 0
-            strip.keyframe_insert('volume')
-        elif(self.mode) == 'INOUT':
-            strip_dur = strip.frame_final_end - strip.frame_final_start
-            if (self.fade_duration*2) > (strip_dur):
-                self.fade_duration = int(strip_dur/2)
-            scn.frame_current = strip.frame_final_start
-            strip.volume = 0
-            strip.keyframe_insert('volume')
-            scn.frame_current += self.fade_duration
-            strip.volume = self.fade_level
-            strip.keyframe_insert('volume')
-            scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.volume = self.fade_level
-            strip.keyframe_insert('volume')
-            scn.frame_current = strip.frame_final_end
-            strip.volume = 0
-            strip.keyframe_insert('volume')
-        else:
-            scn.frame_current = strip.frame_final_start
-            strip.volume = 0
-            strip.keyframe_insert('volume')
-            scn.frame_current += self.fade_duration
-            strip.volume = self.fade_level
-            strip.keyframe_insert('volume')
+        fade_type = 'volume'
     else:
-        if(self.mode) == 'OUT':
-            scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.blend_alpha = self.fade_level
-            strip.keyframe_insert('blend_alpha')
-            scn.frame_current = strip.frame_final_end
-            strip.blend_alpha = 0
-            strip.keyframe_insert('blend_alpha')
-        elif(self.mode) == 'INOUT':
-            scn.frame_current = strip.frame_final_start
-            strip.blend_alpha = 0
-            strip.keyframe_insert('blend_alpha')
-            scn.frame_current += self.fade_duration
-            strip.blend_alpha = self.fade_level
-            strip.keyframe_insert('blend_alpha')
-            scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.blend_alpha = self.fade_level
-            strip.keyframe_insert('blend_alpha')
-            scn.frame_current = strip.frame_final_end
-            strip.blend_alpha = 0
-            strip.keyframe_insert('blend_alpha')
-        else:
-            scn.frame_current = strip.frame_final_start
-            strip.blend_alpha = 0
-            strip.keyframe_insert('blend_alpha')
-            scn.frame_current += self.fade_duration
-            strip.blend_alpha = self.fade_level
-            strip.keyframe_insert('blend_alpha')
+        fade_type = 'blend_alpha'
+
+    if(self.mode) == 'OUT':
+        scn.frame_current = strip.frame_final_end - self.fade_duration
+        SetStripLevel(self, context, self.fade_level)
+        strip.keyframe_insert(fade_type)
+
+        scn.frame_current = strip.frame_final_end
+        SetStripLevel(self, context, 0)
+        strip.keyframe_insert(fade_type)
+
+    elif(self.mode) == 'INOUT':
+        strip_dur = strip.frame_final_end - strip.frame_final_start
+        if (self.fade_duration*2) > (strip_dur):
+            self.fade_duration = int(strip_dur/2)
+
+        scn.frame_current = strip.frame_final_start
+        SetStripLevel(self, context, 0)
+        strip.keyframe_insert(fade_type)
+
+        scn.frame_current += self.fade_duration
+        SetStripLevel(self, context, self.fade_level)
+        strip.keyframe_insert(fade_type)
+
+        scn.frame_current = strip.frame_final_end - self.fade_duration
+        SetStripLevel(self, context, self.fade_level)
+        strip.keyframe_insert(fade_type)
+
+        scn.frame_current = strip.frame_final_end
+        SetStripLevel(self, context, 0)
+        strip.keyframe_insert(fade_type)
+    else:
+        scn.frame_current = strip.frame_final_start
+        SetStripLevel(self, context, 0)
+        strip.keyframe_insert(fade_type)
+
+        scn.frame_current += self.fade_duration
+        SetStripLevel(self, context, self.fade_level)
+        strip.keyframe_insert(fade_type)
 
     self.mode = tmp_mode
     context.scene.frame_current = tmp_current_frame
