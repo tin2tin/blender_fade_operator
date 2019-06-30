@@ -136,15 +136,15 @@ class SequencerDeinterlaceSelectedMovies(Operator):
         return {'FINISHED'}
 
 
-def SequencerFadeInOut(self, context, mode, duration, amount):
+def ExecuteFadeInOut(self, context, mode, duration, level):
     seq = context.scene.sequence_editor
     scn = context.scene
     strip = seq.active_strip
     tmp_current_frame = context.scene.frame_current
     self.mode = mode
-    tmp_mode = (self.mode)
     self.fade_duration = duration
-    self.fade_amount = amount
+    self.fade_level = level
+    tmp_mode = (self.mode)
 
     if tmp_current_frame > strip.frame_final_start and tmp_current_frame < strip.frame_final_end:
         if (self.mode) == "INPLAYHEAD":
@@ -159,23 +159,23 @@ def SequencerFadeInOut(self, context, mode, duration, amount):
     if strip.type == 'SOUND':
         if(self.mode) == 'OUT':
             scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.volume = self.fade_amount
+            strip.volume = self.fade_level
             strip.keyframe_insert('volume')
             scn.frame_current = strip.frame_final_end
             strip.volume = 0
             strip.keyframe_insert('volume')
         elif(self.mode) == 'INOUT':
             strip_dur = strip.frame_final_end - strip.frame_final_start
-            if (self.fade_duration*2) > (strip_dur): 
+            if (self.fade_duration*2) > (strip_dur):
                 self.fade_duration = int(strip_dur/2)
             scn.frame_current = strip.frame_final_start
             strip.volume = 0
             strip.keyframe_insert('volume')
             scn.frame_current += self.fade_duration
-            strip.volume = self.fade_amount
+            strip.volume = self.fade_level
             strip.keyframe_insert('volume')
             scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.volume = self.fade_amount
+            strip.volume = self.fade_level
             strip.keyframe_insert('volume')
             scn.frame_current = strip.frame_final_end
             strip.volume = 0
@@ -185,12 +185,12 @@ def SequencerFadeInOut(self, context, mode, duration, amount):
             strip.volume = 0
             strip.keyframe_insert('volume')
             scn.frame_current += self.fade_duration
-            strip.volume = self.fade_amount
+            strip.volume = self.fade_level
             strip.keyframe_insert('volume')
     else:
         if(self.mode) == 'OUT':
             scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.blend_alpha = self.fade_amount
+            strip.blend_alpha = self.fade_level
             strip.keyframe_insert('blend_alpha')
             scn.frame_current = strip.frame_final_end
             strip.blend_alpha = 0
@@ -200,10 +200,10 @@ def SequencerFadeInOut(self, context, mode, duration, amount):
             strip.blend_alpha = 0
             strip.keyframe_insert('blend_alpha')
             scn.frame_current += self.fade_duration
-            strip.blend_alpha = self.fade_amount
+            strip.blend_alpha = self.fade_level
             strip.keyframe_insert('blend_alpha')
             scn.frame_current = strip.frame_final_end - self.fade_duration
-            strip.blend_alpha = self.fade_amount
+            strip.blend_alpha = self.fade_level
             strip.keyframe_insert('blend_alpha')
             scn.frame_current = strip.frame_final_end
             strip.blend_alpha = 0
@@ -213,40 +213,29 @@ def SequencerFadeInOut(self, context, mode, duration, amount):
             strip.blend_alpha = 0
             strip.keyframe_insert('blend_alpha')
             scn.frame_current += self.fade_duration
-            strip.blend_alpha = self.fade_amount
+            strip.blend_alpha = self.fade_level
             strip.keyframe_insert('blend_alpha')
 
     self.mode = tmp_mode
     context.scene.frame_current = tmp_current_frame
 
 
-def FadeUpdate(self, context):
-
-    # It would be great if changing values in the popup would instantly update the keyframes/waveforms
-    #print(str(self.mode))
-    #SequencerFadeInOut(self, context, fade_mode, fade_duration, fade_amount)#Why doesn't this work!?
-    pass
-
-
-# Missing in this class is the the keyframes in those ranges new key-frames are inserted, have to be removed first.
-# Also missing is the option to insert fades on the full selection and not just the active strip.
 class SEQUENCER_OT_fade_in_out(bpy.types.Operator):
     """Add fades to active strip"""
-    bl_label = "Fades"
+    bl_label = "Fade Settings"
     bl_idname = "sequencer.fade_in_out"
 
     fade_mode: bpy.props.EnumProperty(
-        name="Direction",
+        name="Fade",
         description="Which fade to add",
         items=(
-            ("IN", "Fade In", "Add fade in"),
-            ("OUT", "Fade Out", "Add fade out"),
-            ("INOUT", "Fade In and Out", "Add fade in and out"),
-            ("INPLAYHEAD", "Fade to Playhead", "Add fade in to playhead"),
-            ("OUTPLAYHEAD", "Fade from Playhead", "Add fade out from playhead"),
+            ("IN", "In", "Add fade in"),
+            ("OUT", "Out", "Add fade out"),
+            ("INOUT", "In and Out", "Add fade in and out"),
+            ("INPLAYHEAD", "To Playhead", "Add fade in to playhead"),
+            ("OUTPLAYHEAD", "From Playhead", "Add fade out from playhead"),
         ),
         default="IN",
-        update=FadeUpdate,
     )
     fade_duration: bpy.props.IntProperty(
         name="Duration",
@@ -254,15 +243,13 @@ class SEQUENCER_OT_fade_in_out(bpy.types.Operator):
         min=1,
         max=250,
         default=25,
-        update=FadeUpdate,
     )
-    fade_amount: bpy.props.FloatProperty(
-        name="Amount",
-        description="Maximum value of fade",
+    fade_level: bpy.props.FloatProperty(
+        name="Maximum Level",
+        description="Maximum level of fade",
         min=0.0,
         max=1.0,
         default=1.0,
-        update=FadeUpdate,
     )
 
     def invoke(self, context, event):
@@ -272,12 +259,11 @@ class SEQUENCER_OT_fade_in_out(bpy.types.Operator):
         if scene.animation_data.action is None:
             action = bpy.data.actions.new(scene.name + "Action")
             scene.animation_data.action = action
-
         wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        return wm.invoke_props_dialog(self, width=220)
 
     def execute(self, context):
-        SequencerFadeInOut(self, context, self.fade_mode, self.fade_duration, self.fade_amount)
+        ExecuteFadeInOut(self, context, self.fade_mode, self.fade_duration, self.fade_level)
         return {'FINISHED'}
 
 

@@ -480,12 +480,14 @@ class SEQUENCER_MT_add(Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
         layout.menu("SEQUENCER_MT_add_effect", icon='SHADERFX')
 
+        layout.separator()
+
         col = layout.column()
-        col.menu("SEQUENCER_MT_add_transitions", icon='ARROW_LEFTRIGHT')
-        col.enabled = selected_sequences_len(context) >= 2
-        col = layout.column()
-        col.operator("sequencer.fade_in_out")#, icon='ARROW_LEFTRIGHT')
+        col.operator("sequencer.fade_in_out", text="Fade", icon='IPO_EASE_IN_OUT')
         col.enabled = selected_sequences_len(context) >= 1
+        col = layout.column()
+        col.menu("SEQUENCER_MT_add_transitions", text="Transition", icon='ARROW_LEFTRIGHT')
+        col.enabled = selected_sequences_len(context) >= 2
 
 
 class SEQUENCER_MT_add_empty(Menu):
